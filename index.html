@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mintaphor Gallery</title>
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --bg: #f5f0ff;
+        --text: #111;
+        --card: #ffffff;
+      }
+
+      body.dark {
+        --bg: #181025;
+        --text: #fdfdfd;
+        --card: #2a1e45;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: 'Libre Baskerville', serif;
+        transition: background 0.3s, color 0.3s;
+      }
+
+      #root {
+        min-height: 100vh;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        box-sizing: border-box;
+      }
+
+      .theme-toggle {
+        position: fixed;
+        top: 1rem;
+        right: 2.5rem;
+        background: var(--card);
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transition: background 0.3s;
+        z-index: 1000;
+      }
+
+      .theme-toggle:hover {
+        background: #ccc;
+      }
+    </style>
+  </head>
+  <body>
+    <button class="theme-toggle" onclick="toggleTheme()">🌓 Toggle Theme</button>
+    <div id="root"></div>
+
+    <script>
+      function toggleTheme() {
+        document.body.classList.toggle('dark');
+      }
+    </script>
+
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
