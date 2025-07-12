@@ -2,48 +2,51 @@ import { useEffect } from 'react';
 import { ethers } from 'ethers';
 
 const WalletConnect = ({ setProvider, setSigner, setAddress }) => {
-  const MONAD_TESTNET_PARAMS = {
+  const MONAD_TESTNET = {
     chainId: '0x279F', // 10143 in hex
     chainName: 'Monad Testnet',
+    rpcUrls: ['https://node.testnet.monad.xyz'],
     nativeCurrency: {
       name: 'Monad',
       symbol: 'MON',
-      decimals: 18,
+      decimals: 18
     },
-    rpcUrls: ['https://node.testnet.monad.xyz'],
-    blockExplorerUrls: ['https://explorer.testnet.monad.xyz'],
+    blockExplorerUrls: ['https://explorer.testnet.monad.xyz']
+  };
+
+  const switchToMonad = async () => {
+    if (!window.ethereum) return alert('MetaMask is not installed');
+
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: MONAD_TESTNET.chainId }]
+      });
+    } catch (switchError) {
+      // If the chain has not been added, request to add it
+      if (switchError.code === 4902) {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [MONAD_TESTNET]
+          });
+        } catch (addError) {
+          console.error('Add chain error:', addError);
+        }
+      } else {
+        console.error('Switch error:', switchError);
+      }
+    }
   };
 
   const connectWallet = async () => {
-    if (!window.ethereum) {
-      alert('MetaMask not detected');
-      return;
-    }
+    if (!window.ethereum) return alert('Please install MetaMask');
+
+    await switchToMonad();
 
     try {
-      // Check for correct chain
-      const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
-      if (currentChainId !== MONAD_TESTNET_PARAMS.chainId) {
-        try {
-          await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: MONAD_TESTNET_PARAMS.chainId }],
-          });
-        } catch (switchError) {
-          if (switchError.code === 4902) {
-            // Add network if not present
-            await window.ethereum.request({
-              method: 'wallet_addEthereumChain',
-              params: [MONAD_TESTNET_PARAMS],
-            });
-          } else {
-            console.error('Switch chain error:', switchError);
-            return;
-          }
-        }
-      }
-
       const provider = new ethers.BrowserProvider(window.ethereum);
+      const accounts = await provider.send('eth_requestAccounts', []);
       const signer = await provider.getSigner();
       const address = await signer.getAddress();
 
@@ -56,28 +59,31 @@ const WalletConnect = ({ setProvider, setSigner, setAddress }) => {
   };
 
   useEffect(() => {
-    if (window.ethereum) {
-      window.ethereum.on('accountsChanged', () => {
-        window.location.reload();
-      });
-      window.ethereum.on('chainChanged', () => {
-        window.location.reload();
-      });
-    }
+    if (!window.ethereum) return;
+
+    // Handle chain/network/account changes
+    window.ethereum.on('accountsChanged', () => connectWallet());
+    window.ethereum.on('chainChanged', () => connectWallet());
+
+    return () => {
+      window.ethereum.removeAllListeners('accountsChanged');
+      window.ethereum.removeAllListeners('chainChanged');
+    };
   }, []);
 
   return (
-    <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
+    <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
       <button
         onClick={connectWallet}
         style={{
-          padding: '0.75rem 1.5rem',
-          fontSize: '1rem',
+          padding: '0.8rem 1.6rem',
           backgroundColor: '#8A2BE2',
-          color: 'white',
+          color: '#fff',
+          fontWeight: 'bold',
           border: 'none',
           borderRadius: '8px',
           cursor: 'pointer',
+          fontSize: '1rem'
         }}
       >
         Connect Wallet
