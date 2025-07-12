@@ -2,6 +2,7 @@ import { useState } from 'react';
 import WalletConnect from './components/WalletConnect';
 import MintForm from './components/MintForm';
 import Gallery from './components/Gallery';
+import { Analytics } from '@vercel/analytics/react';
 
 function App() {
   const [provider, setProvider] = useState(null);
@@ -38,6 +39,9 @@ function App() {
           🔮 Mintaphor by Gentledove.eth · Built on Monad · © 2025
         </p>
       </div>
+
+      {/* Vercel Analytics */}
+      <Analytics />
     </div>
   );
 }
