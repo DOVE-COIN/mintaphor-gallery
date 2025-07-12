@@ -1,89 +1,87 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { ethers } from 'ethers';
 
 const WalletConnect = ({ setProvider, setSigner, setAddress }) => {
-  const [connected, setConnected] = useState(false);
-
-  const ensureMonadNetwork = async () => {
-    const monadChainId = '0x278f'; // 10143 in hex
-
-    const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
-    if (currentChainId !== monadChainId) {
-      try {
-        await window.ethereum.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: monadChainId }],
-        });
-      } catch (switchError) {
-        if (switchError.code === 4902) {
-          try {
-            await window.ethereum.request({
-              method: 'wallet_addEthereumChain',
-              params: [{
-                chainId: monadChainId,
-                chainName: 'Monad Testnet',
-                rpcUrls: ['https://node.testnet.monad.xyz'],
-                nativeCurrency: {
-                  name: 'Monad',
-                  symbol: 'MON',
-                  decimals: 18
-                },
-                blockExplorerUrls: ['https://explorer.testnet.monad.xyz']
-              }]
-            });
-          } catch (addError) {
-            console.error('Failed to add Monad Testnet:', addError);
-            throw addError;
-          }
-        } else {
-          console.error('Failed to switch to Monad Testnet:', switchError);
-          throw switchError;
-        }
-      }
-    }
+  const MONAD_TESTNET_PARAMS = {
+    chainId: '0x279F', // 10143 in hex
+    chainName: 'Monad Testnet',
+    nativeCurrency: {
+      name: 'Monad',
+      symbol: 'MON',
+      decimals: 18,
+    },
+    rpcUrls: ['https://node.testnet.monad.xyz'],
+    blockExplorerUrls: ['https://explorer.testnet.monad.xyz'],
   };
 
   const connectWallet = async () => {
     if (!window.ethereum) {
-      alert("Please install MetaMask to continue.");
+      alert('MetaMask not detected');
       return;
     }
 
     try {
-      await window.ethereum.request({ method: 'eth_requestAccounts' });
-      await ensureMonadNetwork();
+      // Check for correct chain
+      const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+      if (currentChainId !== MONAD_TESTNET_PARAMS.chainId) {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: MONAD_TESTNET_PARAMS.chainId }],
+          });
+        } catch (switchError) {
+          if (switchError.code === 4902) {
+            // Add network if not present
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [MONAD_TESTNET_PARAMS],
+            });
+          } else {
+            console.error('Switch chain error:', switchError);
+            return;
+          }
+        }
+      }
 
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
       const address = await signer.getAddress();
 
       setProvider(provider);
       setSigner(signer);
       setAddress(address);
-      setConnected(true);
     } catch (err) {
-      console.error("Wallet connection failed:", err);
+      console.error('Wallet connection error:', err);
     }
   };
 
+  useEffect(() => {
+    if (window.ethereum) {
+      window.ethereum.on('accountsChanged', () => {
+        window.location.reload();
+      });
+      window.ethereum.on('chainChanged', () => {
+        window.location.reload();
+      });
+    }
+  }, []);
+
   return (
-    <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
-      {!connected && (
-        <button
-          onClick={connectWallet}
-          style={{
-            padding: '0.8rem 1.5rem',
-            background: '#8A2BE2',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '1rem',
-            cursor: 'pointer'
-          }}
-        >
-          🔌 Connect Wallet
-        </button>
-      )}
+    <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
+      <button
+        onClick={connectWallet}
+        style={{
+          padding: '0.75rem 1.5rem',
+          fontSize: '1rem',
+          backgroundColor: '#8A2BE2',
+          color: 'white',
+          border: 'none',
+          borderRadius: '8px',
+          cursor: 'pointer',
+        }}
+      >
+        Connect Wallet
+      </button>
     </div>
   );
 };
