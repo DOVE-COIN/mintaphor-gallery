@@ -1,102 +1,68 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ethers } from 'ethers';
 
-const MONAD_TESTNET = {
-  chainId: '0x279F', // 10143 in hex
-  chainName: 'Monad Testnet',
-  nativeCurrency: {
-    name: 'Monad',
-    symbol: 'MON',
-    decimals: 18,
-  },
-  rpcUrls: ['https://node.testnet.monad.xyz'],
-  blockExplorerUrls: ['https://explorer.testnet.monad.xyz'],
-};
-
-const WalletConnect = ({ setProvider, setSigner, setAddress }) => {
+export default function WalletConnect({ setProvider, setSigner, setAddress }) {
   const [connected, setConnected] = useState(false);
-  const [walletAddress, setWalletAddress] = useState('');
 
-  const switchToMonadTestnet = async () => {
+  const MONAD_TESTNET_PARAMS = {
+    chainId: '0x279F', // 10143
+    chainName: 'Monad Testnet',
+    nativeCurrency: {
+      name: 'Monad',
+      symbol: 'MON',
+      decimals: 18,
+    },
+    rpcUrls: ['https://node.testnet.monad.xyz'],
+    blockExplorerUrls: ['https://explorer.testnet.monad.xyz'],
+  };
+
+  const switchToMonad = async () => {
     try {
       await window.ethereum.request({
         method: 'wallet_switchEthereumChain',
-        params: [{ chainId: MONAD_TESTNET.chainId }],
+        params: [{ chainId: MONAD_TESTNET_PARAMS.chainId }],
       });
     } catch (switchError) {
       if (switchError.code === 4902) {
-        // Chain not added
         try {
           await window.ethereum.request({
             method: 'wallet_addEthereumChain',
-            params: [MONAD_TESTNET],
+            params: [MONAD_TESTNET_PARAMS],
           });
         } catch (addError) {
           console.error('Failed to add Monad Testnet:', addError);
         }
       } else {
-        console.error('Error switching chain:', switchError);
+        console.error('Failed to switch to Monad Testnet:', switchError);
       }
     }
   };
 
-  const connectWallet = async () => {
+  const connect = async () => {
     if (!window.ethereum) {
-      alert('MetaMask is required.');
+      alert("MetaMask not detected!");
       return;
     }
 
-    try {
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const address = accounts[0];
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+    const address = await signer.getAddress();
 
-      setProvider(provider);
-      setSigner(signer);
-      setAddress(address);
-      setWalletAddress(address);
-      setConnected(true);
+    setProvider(provider);
+    setSigner(signer);
+    setAddress(address);
+    setConnected(true);
 
-      await switchToMonadTestnet();
-    } catch (err) {
-      console.error('Wallet connection error:', err);
-    }
+    await switchToMonad(); // 🚀 Switch to Monad after connecting
   };
 
-  useEffect(() => {
-    const checkConnection = async () => {
-      if (window.ethereum) {
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-        if (accounts.length > 0) {
-          connectWallet(); // auto-connect and switch
-        }
-      }
-    };
-    checkConnection();
-  }, []);
-
   return (
-    <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
-      {connected ? (
-        <p style={{ fontWeight: 'bold', color: '#4CAF50' }}>
-          ✅ Connected as {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
-        </p>
+    <div>
+      {!connected ? (
+        <button onClick={connect}>🔗 Connect Wallet</button>
       ) : (
-        <button onClick={connectWallet} style={{
-          padding: '0.8rem 1.6rem',
-          fontSize: '1rem',
-          background: '#8A2BE2',
-          color: 'white',
-          border: 'none',
-          borderRadius: '8px',
-          cursor: 'pointer'
-        }}>
-          🔌 Connect Wallet
-        </button>
+        <p>✅ Wallet connected</p>
       )}
     </div>
   );
-};
-
-export default WalletConnect;
+}
