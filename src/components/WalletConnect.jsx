@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ethers } from 'ethers';
 
 const WalletConnect = ({ setProvider, setSigner, setAddress }) => {
@@ -7,14 +7,14 @@ const WalletConnect = ({ setProvider, setSigner, setAddress }) => {
   const ensureMonadNetwork = async () => {
     const monadChainId = '0x278f'; // 10143 in hex
 
-    if (window.ethereum.networkVersion !== '10143') {
+    const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+    if (currentChainId !== monadChainId) {
       try {
         await window.ethereum.request({
           method: 'wallet_switchEthereumChain',
           params: [{ chainId: monadChainId }],
         });
       } catch (switchError) {
-        // If Monad Testnet is not added to MetaMask, add it
         if (switchError.code === 4902) {
           try {
             await window.ethereum.request({
@@ -33,41 +33,38 @@ const WalletConnect = ({ setProvider, setSigner, setAddress }) => {
             });
           } catch (addError) {
             console.error('Failed to add Monad Testnet:', addError);
+            throw addError;
           }
         } else {
-          console.error('Failed to switch network:', switchError);
+          console.error('Failed to switch to Monad Testnet:', switchError);
+          throw switchError;
         }
       }
     }
   };
 
   const connectWallet = async () => {
-    if (typeof window.ethereum !== 'undefined') {
-      try {
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
-        await provider.send("eth_requestAccounts", []);
-        await ensureMonadNetwork(); // 🟣 Prompt to switch if not on Monad
+    if (!window.ethereum) {
+      alert("Please install MetaMask to continue.");
+      return;
+    }
 
-        const signer = provider.getSigner();
-        const address = await signer.getAddress();
+    try {
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      await ensureMonadNetwork();
 
-        setProvider(provider);
-        setSigner(signer);
-        setAddress(address);
-        setConnected(true);
-      } catch (err) {
-        console.error("Wallet connection failed:", err);
-      }
-    } else {
-      alert('MetaMask is not installed');
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      const address = await signer.getAddress();
+
+      setProvider(provider);
+      setSigner(signer);
+      setAddress(address);
+      setConnected(true);
+    } catch (err) {
+      console.error("Wallet connection failed:", err);
     }
   };
-
-  useEffect(() => {
-    if (window.ethereum && window.ethereum.selectedAddress) {
-      connectWallet();
-    }
-  }, []);
 
   return (
     <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
